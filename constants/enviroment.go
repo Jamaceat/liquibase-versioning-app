@@ -7,3 +7,9 @@ const (
 	DBPort     string = "DB_PORT"     // Database port
 	DBUser     string = "DB_USER"     // Database username
 )
+
+const (
+	AppHost       string = "APP_HOST"
+	AppPort       string = "APP_PORT"
+	AppIdentifier string = "APP_IDENTIFIER"
+)
