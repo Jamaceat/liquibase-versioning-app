@@ -2,13 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 	constant "github.com/Jamaceat/liquibase-versioning-app/constants"
 	"github.com/Jamaceat/liquibase-versioning-app/handler/middleware"
-	"github.com/Jamaceat/liquibase-versioning-app/model/dto"
 	"github.com/Jamaceat/liquibase-versioning-app/server"
 	"github.com/joho/godotenv"
 )
@@ -19,9 +17,7 @@ func main() {
 
 	// router.Use(middleware.ContentTypeMiddleware)
 
-	dbConfiguration, serverConfiguration := getEnviroments()
-
-	fmt.Printf("%+v\n", dbConfiguration)
+	serverConfiguration := getEnviroments()
 
 	srv := server.New(serverConfiguration)
 
@@ -50,17 +46,10 @@ func main() {
 
 }
 
-func getEnviroments() (dbConfiguration dto.BDConnectionConfiguration, serverConfiguration server.Options) {
+func getEnviroments() (serverConfiguration server.Options) {
 	envs, err := godotenv.Read(constant.ENV_FILE)
 	if err != nil {
 		panic("Cannot read .env file")
-	}
-
-	dbConfiguration = dto.BDConnectionConfiguration{Host: envs[constant.DBHost],
-		Port:     envs[constant.DBHost],
-		User:     envs[constant.DBUser],
-		Password: envs[constant.DBPassword],
-		DBName:   envs[constant.DBName],
 	}
 
 	serverConfiguration = server.Options{
