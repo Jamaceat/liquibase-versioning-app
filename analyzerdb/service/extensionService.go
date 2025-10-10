@@ -1,18 +1,20 @@
 package service
 
 import (
+	"bytes"
+	"context"
 	"fmt"
-	"os"
-	"strings"
+	"log"
 	"time"
 
 	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/repository"
-	"github.com/Jamaceat/liquibase-versioning-app/utils/path"
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/templates"
+	filecreator "github.com/Jamaceat/liquibase-versioning-app/utils/file_creator"
 )
 
 type (
 	ExtensionService interface {
-		GetFilesFromExtensions() (filePath string, err error)
+		GetFilesFromExtensions() (filePath bytes.Buffer, err error)
 	}
 
 	extensionService struct {
@@ -21,35 +23,31 @@ type (
 )
 
 // GetFilesFromExtensions implements ExtensionService.
-func (e *extensionService) GetFilesFromExtensions() (filePath string, err error) {
-	var sb strings.Builder
+func (e *extensionService) GetFilesFromExtensions() (filePath bytes.Buffer, err error) {
+	context, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var buffer bytes.Buffer
 
-	sb.WriteString("-- Prueba")
-
-	directoryPath := fmt.Sprintf("%s/generatedFiles", path.GetFindProjectRoot())
-
-	if _, err := os.Stat(directoryPath); os.IsNotExist(err) {
-
-		os.Mkdir(directoryPath, os.ModePerm)
+	extensions, err := e.schemaDb.GetExtensions(context)
+	var script string
+	for _, value := range extensions {
+		script += fmt.Sprintf(templates.ExtensionTemplate, value.Extname, value.Extversion, value.Extname)
 	}
-
-	filePath = fmt.Sprintf("%s/generatedFiles/migration-%s-%d.sql", directoryPath, "extensions", time.Now().UnixNano())
-
-	file, err := os.Create(filePath)
 
 	if err != nil {
-		return "", err
+		log.Println("Error al recuperar las extentions")
+		return buffer, err
 
 	}
-	defer file.Close()
 
-	_, err = file.WriteString(sb.String())
-
+	err = filecreator.GenerateSQLFile(&buffer, script)
 	if err != nil {
-		return "", err
+
+		return buffer, err
+
 	}
 
-	return
+	return buffer, nil
 
 }
 

@@ -27,7 +27,7 @@ func init() {
 	}
 
 	connectionConfiguration := dto.BDConnectionConfiguration{Host: envs[constant.DBHost],
-		Port:     envs[constant.DBHost],
+		Port:     envs[constant.DBPort],
 		User:     envs[constant.DBUser],
 		Password: envs[constant.DBPassword],
 		DBName:   envs[constant.DBName],

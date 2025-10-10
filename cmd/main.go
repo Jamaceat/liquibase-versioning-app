@@ -5,6 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/handler"
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/repository"
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/service"
 	constant "github.com/Jamaceat/liquibase-versioning-app/constants"
 	"github.com/Jamaceat/liquibase-versioning-app/handler/middleware"
 	"github.com/Jamaceat/liquibase-versioning-app/server"
@@ -16,6 +19,12 @@ func main() {
 	// router := chi.NewRouter()
 
 	// router.Use(middleware.ContentTypeMiddleware)
+
+	repo := repository.NewSchemaRepository()
+
+	serviceExtension := service.NewExtensionService(repo)
+
+	endp := handler.CreateEndpoint(serviceExtension)
 
 	serverConfiguration := getEnviroments()
 
@@ -39,6 +48,8 @@ func main() {
 		w.Write(jsonData)
 
 	})
+
+	router.Get("/extensions", http.HandlerFunc(endp.GetDatabaseMigration()))
 
 	if err := srv.Start(router); err != nil {
 		log.Fatal(err)
