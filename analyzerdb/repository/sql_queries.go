@@ -35,7 +35,22 @@ const (
 		a.attnum
 	`
 
-	getSequencesDetaile = `
+	getEnumDetailed = `
+		SELECT
+		n.nspname AS schema_name,
+		t.typname AS enum_name,
+		e.enumlabel AS enum_value
+		FROM pg_catalog.pg_type t
+		JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+		JOIN pg_catalog.pg_enum e ON t.oid = e.enumtypid
+		WHERE
+		n.nspname = '%s'  -- Filtra por el esquema
+		AND t.typtype = 'e'     -- Filtra solo los tipos que son ENUM
+		ORDER BY 
+		enum_name, e.enumsortorder
+	`
+
+	getSequencesDetailed = `
 		SELECT
 		n.nspname AS nombre_esquema,
 		cl_tabla.relname AS nombre_tabla,

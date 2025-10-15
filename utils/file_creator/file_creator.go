@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/dto"
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/templates"
 )
 
 func GenerateSQLFile(writer io.Writer, script string) error {
@@ -17,4 +20,24 @@ func GenerateSQLFile(writer io.Writer, script string) error {
 	}
 
 	return nil
+}
+
+func FormatType(typeEntity dto.TypesEntityComplete) (formatted string) {
+
+	var typeStructureSetted string
+
+	for _, value := range typeEntity.TypeEntityColumns {
+
+		typeStructureSetted += fmt.Sprintf(templates.TypeStructureTemplate, value.ColumnName, value.AliasType)
+
+	}
+
+	formatted = fmt.Sprintf(templates.TypeTemplate,
+		typeEntity.TypeName.TypName,
+		typeEntity.SchemaName,
+		typeEntity.TypeName.TypName,
+		typeStructureSetted,
+	)
+
+	return
 }
