@@ -77,12 +77,12 @@ const (
 	`
 
 	getTables = `
-			SELECT * FROM pg_catalog.pg_tables pt WHERE pt.schemaname ='%s' --schema
+			SELECT pt.schemaname AS schema_name ,pt.tablename AS table_name FROM pg_catalog.pg_tables pt WHERE pt.schemaname =$1 --schema
 	`
 
 	getTableDetail = `
 	SELECT
-		t.relname AS nombre_tabla,
+		-- t.relname AS nombre_tabla,
 		a.attname AS nombre_columna,
 		format_type(a.atttypid, a.atttypmod) AS tipo_de_dato_completo,
 		pt.typname AS alias_del_tipo
@@ -96,10 +96,10 @@ const (
 		pg_catalog.pg_namespace AS n ON n.oid = t.relnamespace
 	WHERE
 		t.relkind = 'r' -- Asegura que solo sean tablas
-		AND n.nspname = 'public' -- Filtra por el esquema public
+		AND n.nspname = $1 -- Filtra por el esquema public
 		AND a.attnum > 0 -- Excluye columnas del sistema
 		AND NOT a.attisdropped -- Excluye columnas eliminadas
-		AND t.relname = '%s' -- nombre de la tabla
+		AND t.relname = $2 -- nombre de la tabla
 	ORDER BY
 		t.relname,
 		a.attnum

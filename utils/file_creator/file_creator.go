@@ -30,7 +30,7 @@ func FormatType(typeEntity dto.TypesEntityComplete) (formatted string) {
 	var columns []string
 	for _, value := range typeEntity.TypeEntityColumns {
 
-		columns = append(columns, fmt.Sprintf(templates.TypeStructureTemplate, value.ColumnName, value.AliasType))
+		columns = append(columns, fmt.Sprintf(templates.TypeStructureTemplate, value.ColumnName, value.NoAlias))
 
 	}
 
@@ -59,5 +59,23 @@ func FormatEnum(enumEntityName string, enumEntityValues []string, schema string)
 	structuredParameters := fmt.Sprintf(templates.EnumStructureTemplate, enumValues)
 
 	return fmt.Sprintf(templates.EnumTemplate, enumEntityName, schema, enumEntityName, structuredParameters)
+
+}
+
+func FormatTables(tableGeneral dto.TableDetailed) string {
+
+	columnFormatted := make([]string, 0)
+
+	for _, value := range tableGeneral.Columns {
+
+		upperColumnType := strings.ToUpper(value.NoAliasType)
+
+		columnFormatted = append(columnFormatted, fmt.Sprintf(templates.ColumnTableTemplate, value.ColumnName, upperColumnType))
+
+	}
+
+	allColumns := strings.Join(columnFormatted, ",\n\t")
+
+	return fmt.Sprintf(templates.TableTemplate, tableGeneral.SchemaName, tableGeneral.TableName, allColumns)
 
 }

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/dto"
 	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/repository"
 	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/templates"
 	filecreator "github.com/Jamaceat/liquibase-versioning-app/utils/file_creator"
@@ -17,12 +18,51 @@ type (
 	ExtensionService interface {
 		GetFilesFromExtensions() (file bytes.Buffer, err error)
 		GetFilesFromTypes(schema string) (file bytes.Buffer, err error)
+		GetFilesFromTables(schema string) (file bytes.Buffer, err error)
 	}
 
 	extensionService struct {
 		schemaDb repository.SchemaRepository
 	}
 )
+
+// GetFilesFromTables implements ExtensionService.
+func (e *extensionService) GetFilesFromTables(schema string) (file bytes.Buffer, err error) {
+	context, cancel := context.WithTimeout(context.Background(), 30*time.Hour)
+	defer cancel()
+
+	tableNames, err := e.schemaDb.GetTablesName(context, schema)
+
+	if err != nil {
+		return
+	}
+
+	var tableGeneral []dto.TableDetailed = make([]dto.TableDetailed, 0)
+
+	for _, tableName := range tableNames {
+
+		tableDetail, err := e.schemaDb.GetTableDetail(context, schema, tableName.TableName)
+
+		if err != nil {
+
+			return bytes.Buffer{}, err
+		}
+
+		tableGeneral = append(tableGeneral, dto.TableDetailed{TableName: tableName.TableName, SchemaName: tableName.SchemaName, Columns: tableDetail})
+
+	}
+
+	var result string
+
+	for _, table := range tableGeneral {
+		result += filecreator.FormatTables(table)
+	}
+
+	filecreator.GenerateSQLFile(&file, result)
+
+	return
+
+}
 
 // GetFilesFromTypes implements ExtensionService.
 func (e *extensionService) GetFilesFromTypes(schema string) (file bytes.Buffer, err error) {

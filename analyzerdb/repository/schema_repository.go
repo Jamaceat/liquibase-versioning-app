@@ -14,12 +14,76 @@ type (
 		GetTypesName(context context.Context, schema string) (typesName []string, err error)
 		GetTypesColumns(context context.Context, schema, typeName string) (typesEntityColumn []dto.TypeEntityColumns, err error)
 		GetEnums(context context.Context, schema string) (enumEntity []dto.EnumEntity, err error)
+		GetTablesName(context context.Context, schema string) (tableNames []dto.TableName, err error)
+		GetTableDetail(context context.Context, schema, tableName string) (tableColumns []dto.Column, err error)
 	}
 
 	schemaRepository struct {
 		db context_db.DbContext
 	}
 )
+
+// GetTableDetail implements SchemaRepository.
+func (s *schemaRepository) GetTableDetail(context context.Context, schema string, tableName string) (tableColumns []dto.Column, err error) {
+
+	rows, err := s.db.Database.QueryContext(context, getTableDetail, schema, tableName)
+
+	if err != nil {
+
+		return
+	}
+
+	var tableColumn dto.Column
+
+	for rows.Next() {
+
+		err = rows.Scan(
+			&tableColumn.ColumnName,
+			&tableColumn.NoAliasType,
+			&tableColumn.AliasType,
+		)
+
+		if err != nil {
+			break
+		}
+
+		tableColumns = append(tableColumns, tableColumn)
+
+	}
+
+	return
+}
+
+// GetTablesName implements SchemaRepository.
+func (s *schemaRepository) GetTablesName(context context.Context, schema string) (tableNames []dto.TableName, err error) {
+
+	rows, err := s.db.Database.QueryContext(context, getTables, schema)
+
+	if err != nil {
+
+		return
+	}
+
+	var tableNameAux dto.TableName
+
+	for rows.Next() {
+
+		err = rows.Scan(
+			&tableNameAux.SchemaName,
+			&tableNameAux.TableName,
+		)
+
+		if err != nil {
+
+			break
+		}
+
+		tableNames = append(tableNames, tableNameAux)
+
+	}
+
+	return
+}
 
 // GetEnums implements SchemaRepository.
 func (s *schemaRepository) GetEnums(context context.Context, schema string) (enumsEntity []dto.EnumEntity, err error) {

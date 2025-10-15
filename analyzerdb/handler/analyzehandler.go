@@ -14,12 +14,41 @@ type (
 	AnalyzerDB interface {
 		GetDatabaseMigration() Controller
 		GetTypeMigration() Controller
+		GetTablesMigration() Controller
 	}
 
 	analyzerPostgres struct {
 		servcExtension service.ExtensionService
 	}
 )
+
+// GetTablesMigration implements AnalyzerDB.
+func (a *analyzerPostgres) GetTablesMigration() Controller {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		buffer, err := a.servcExtension.GetFilesFromTables("public")
+
+		if err != nil {
+			log.Printf("Error generando el archivo de migracion TypeService en el buffer: %v", err)
+			http.Error(w, "error interno del servidor", http.StatusInternalServerError)
+			return
+		}
+		downloadFilename := fmt.Sprintf("migration-buffered-types-%s.sql", time.Now().Format("2006-01-02"))
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", downloadFilename))
+		w.Header().Set("Content-Length", strconv.Itoa(buffer.Len())) // .Len() da el tamaño en bytes.
+
+		_, err = w.Write(buffer.Bytes()) // .Bytes() devuelve el contenido como un slice de bytes.
+		if err != nil {
+			log.Printf("Error escribiendo el buffer en la respuesta: %v", err)
+			http.Error(w, "error interno del servidor", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(200)
+
+	}
+}
 
 // GetTypeMigration implements AnalyzerDB.
 func (a *analyzerPostgres) GetTypeMigration() Controller {

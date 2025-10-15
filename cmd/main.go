@@ -51,6 +51,7 @@ func main() {
 
 	router.Get("/extensions", http.HandlerFunc(endp.GetDatabaseMigration()))
 	router.Get("/types", http.HandlerFunc(endp.GetTypeMigration()))
+	router.Get("/tables", http.HandlerFunc(endp.GetTablesMigration()))
 
 	if err := srv.Start(router); err != nil {
 		log.Fatal(err)
