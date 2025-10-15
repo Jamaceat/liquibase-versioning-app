@@ -35,7 +35,7 @@ func (o *Options) Start(router http.Handler) error {
 
 	fmt.Println("Iniciando Servidor en http://127.0.0.1:8008")
 	srv := &http.Server{
-		Handler: http.TimeoutHandler(router, time.Second*20, "TimeOut!"),
+		Handler: http.TimeoutHandler(router, time.Hour*20, "TimeOut!"),
 		Addr:    fmt.Sprintf("%s:%s", o.Host, o.Port),
 	}
 

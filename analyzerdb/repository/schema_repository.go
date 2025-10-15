@@ -53,7 +53,7 @@ func (s *schemaRepository) GetEnums(context context.Context, schema string) (enu
 // GetTypesDetailed implements SchemaRepository.
 func (s *schemaRepository) GetTypesColumns(context context.Context, schema, typeName string) (typesEntityColumn []dto.TypeEntityColumns, err error) {
 
-	rows, err := s.db.Database.QueryContext(context, getTypesDetailed)
+	rows, err := s.db.Database.QueryContext(context, fmt.Sprintf(getTypesDetailed, typeName, schema))
 
 	if err != nil {
 		return typesEntityColumn, err
@@ -66,6 +66,7 @@ func (s *schemaRepository) GetTypesColumns(context context.Context, schema, type
 
 		err = rows.Scan(
 			&typeEntityColumn.ColumnName,
+			&typeEntityColumn.NoAlias,
 			&typeEntityColumn.AliasType,
 		)
 
@@ -89,19 +90,19 @@ func (s *schemaRepository) GetTypesName(context context.Context, schema string) 
 	}
 	defer rows.Close()
 
-	var TypeEntityNAux string
+	var TypeEntityNAux dto.TypesEntityN
 
 	for rows.Next() {
 
 		err = rows.Scan(
-			&TypeEntityNAux,
+			&TypeEntityNAux.TypName,
 		)
 
 		if err != nil {
 			break
 
 		}
-		typesName = append(typesName, TypeEntityNAux)
+		typesName = append(typesName, TypeEntityNAux.TypName)
 	}
 
 	return

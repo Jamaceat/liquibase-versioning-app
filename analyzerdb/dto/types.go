@@ -13,6 +13,7 @@ type (
 
 	TypeEntityColumns struct {
 		ColumnName string `json:"column_name"`
+		NoAlias    string `json:"no_alias"`
 		AliasType  string `json:"alias"`
 	}
 

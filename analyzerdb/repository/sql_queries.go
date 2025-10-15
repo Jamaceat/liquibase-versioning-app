@@ -6,7 +6,7 @@ const (
 	`
 
 	getTypes = `
-	SELECT * FROM pg_catalog.pg_type pt WHERE pt.typowner != 10 --typowner 10 es por defecto
+	SELECT pt.typname FROM pg_catalog.pg_type pt WHERE pt.typowner != 10 --typowner 10 es por defecto
 	AND pt.typname ~ '^[a-zA-Z].+' 
 	AND pt.typnamespace  IN (SELECT pn."oid"  FROM pg_catalog.pg_namespace pn WHERE pn.nspname ='%s') --schema
 	AND pt.typname  IN (SELECT pc.relname FROM pg_catalog.pg_class pc WHERE pc.relkind ='c')

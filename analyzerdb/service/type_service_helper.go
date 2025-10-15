@@ -28,11 +28,6 @@ func typeServiceHelper(repository repository.SchemaRepository,
 		return
 	}
 
-	if err != nil {
-		errChan <- errors.New("not found typeNames")
-		return
-	}
-
 	var resultEntity []dto.TypesEntityComplete
 
 	for _, value := range typeNames {
@@ -74,5 +69,20 @@ func enumServiceHelper(repository repository.SchemaRepository,
 	if err != nil {
 		errChan <- fmt.Errorf("error al intentar recuperar los enums %w", err)
 	}
+
+	enumsUniquesName := make(map[string][]string)
+
+	for _, enumName := range enumsUnformatted {
+		enumsUniquesName[enumName.EnumName] = append(enumsUniquesName[enumName.EnumName], enumName.EnumValue)
+	}
+
+	var prepareResult []string
+
+	for key, value := range enumsUniquesName {
+
+		prepareResult = append(prepareResult, filecreator.FormatEnum(key, value, schema))
+	}
+
+	scriptUnformattedChan <- prepareResult
 
 }

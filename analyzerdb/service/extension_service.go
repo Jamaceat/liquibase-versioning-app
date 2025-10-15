@@ -26,7 +26,7 @@ type (
 
 // GetFilesFromTypes implements ExtensionService.
 func (e *extensionService) GetFilesFromTypes(schema string) (file bytes.Buffer, err error) {
-	contextTypes, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	contextTypes, cancel := context.WithTimeout(context.Background(), 30*time.Hour)
 	defer cancel()
 
 	var buffer bytes.Buffer
@@ -75,12 +75,17 @@ func (e *extensionService) GetFilesFromTypes(schema string) (file bytes.Buffer, 
 	}
 
 	// resultUnformattedTypes = append(resultUnformattedTypes, resultUnformattedEnums...)
+	if firstError != nil {
 
+		return file, firstError
+	}
+	var result string
 	for _, value := range resultUnformattedTypes {
 
-		filecreator.GenerateSQLFile(&buffer, value)
-	}
+		result += value
 
+	}
+	filecreator.GenerateSQLFile(&buffer, result)
 	return buffer, nil
 }
 
