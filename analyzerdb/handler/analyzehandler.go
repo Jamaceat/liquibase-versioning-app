@@ -2,12 +2,15 @@ package handler
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Jamaceat/liquibase-versioning-app/analyzerdb/service"
+	sliceutils "github.com/Jamaceat/liquibase-versioning-app/utils/slice_utils"
 )
 
 type (
@@ -15,12 +18,52 @@ type (
 		GetDatabaseMigration() Controller
 		GetTypeMigration() Controller
 		GetTablesMigration() Controller
+		GetParametersData() Controller
 	}
 
 	analyzerPostgres struct {
 		servcExtension service.ExtensionService
 	}
 )
+
+// GetParametersData implements AnalyzerDB.
+func (a *analyzerPostgres) GetParametersData() Controller {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// buffer,err :=
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+		if err := r.ParseMultipartForm((10 << 20) * 2); err != nil {
+			http.Error(w, "El archivo es demasiado grande.", http.StatusBadRequest)
+			return
+		}
+
+		file, handler, err := r.FormFile("parameterizedTables")
+		if err != nil {
+			fmt.Println("Error al obtener el archivo", err)
+			http.Error(w, "No se pudo obtener el archivo del formulario.", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		fileBytes, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "No se pudo leer el archivo.", http.StatusBadRequest)
+			return
+		}
+
+		fileContent := string(fileBytes)
+		lines := strings.Split(fileContent, "\n")
+
+		uniques := sliceutils.UniquesStringFamily(lines)
+		fmt.Println("---------------------------------------------")
+		for _, v := range uniques {
+			fmt.Println(v)
+		}
+		fmt.Println("---------------------------------------------")
+		fmt.Printf("Archivo leido con exito %s", handler.Filename)
+
+	}
+}
 
 // GetTablesMigration implements AnalyzerDB.
 func (a *analyzerPostgres) GetTablesMigration() Controller {
@@ -33,7 +76,7 @@ func (a *analyzerPostgres) GetTablesMigration() Controller {
 			http.Error(w, "error interno del servidor", http.StatusInternalServerError)
 			return
 		}
-		downloadFilename := fmt.Sprintf("migration-buffered-types-%s.sql", time.Now().Format("2006-01-02"))
+		downloadFilename := fmt.Sprintf("migration-buffered-tables-%s.sql", time.Now().Format("2006-01-02"))
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", downloadFilename))
 		w.Header().Set("Content-Length", strconv.Itoa(buffer.Len())) // .Len() da el tamaño en bytes.

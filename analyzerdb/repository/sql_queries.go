@@ -119,4 +119,6 @@ const (
 	WHERE
 	pn.nspname = '%s' -- schema
 	`
+
+	getDataParameterizedTables = `SELECT * FROM "%s"."%s"`
 )

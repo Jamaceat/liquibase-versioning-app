@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ type (
 		GetFilesFromExtensions() (file bytes.Buffer, err error)
 		GetFilesFromTypes(schema string) (file bytes.Buffer, err error)
 		GetFilesFromTables(schema string) (file bytes.Buffer, err error)
+		GetDMLFromTables(schema string) (file bytes.Buffer, err error)
 	}
 
 	extensionService struct {
@@ -26,41 +28,96 @@ type (
 	}
 )
 
+// GetDMLFromTables implements ExtensionService.
+func (e *extensionService) GetDMLFromTables(schema string) (file bytes.Buffer, err error) {
+	panic("unimplemented")
+}
+
 // GetFilesFromTables implements ExtensionService.
 func (e *extensionService) GetFilesFromTables(schema string) (file bytes.Buffer, err error) {
 	context, cancel := context.WithTimeout(context.Background(), 30*time.Hour)
 	defer cancel()
 
-	tableNames, err := e.schemaDb.GetTablesName(context, schema)
+	numWorkers := 20
+	tableNameChan := make(chan dto.TableName)
+	errChan := make(chan error, 1) // Buffered channel para no bloquear al primer error
+	tableDetailedChan := make(chan dto.TableDetailed)
 
-	if err != nil {
-		return
+	var wg sync.WaitGroup
+
+	// 1. Iniciar los workers
+	for i := range numWorkers {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for value := range tableNameChan {
+				tableDetail, err := e.schemaDb.GetTableDetail(context, schema, value.TableName)
+				if err != nil {
+					// Intentar enviar el error sin bloquear. Si el canal está lleno, se descarta.
+					// Mejor aún sería usar un errgroup.
+					select {
+					case errChan <- err:
+					default:
+					}
+					return // Salir del worker si hay un error
+				}
+				tableDetailedChan <- dto.TableDetailed{TableName: value.TableName, SchemaName: value.SchemaName, Columns: tableDetail}
+			}
+			log.Printf("Worker %d finalizado", id)
+		}(i)
 	}
 
-	var tableGeneral []dto.TableDetailed = make([]dto.TableDetailed, 0)
-
-	for _, tableName := range tableNames {
-
-		tableDetail, err := e.schemaDb.GetTableDetail(context, schema, tableName.TableName)
-
+	// 2. Enviar trabajos en una goroutine separada para no bloquear la principal
+	go func() {
+		tableNames, err := e.schemaDb.GetTablesName(context, schema)
 		if err != nil {
-
-			return bytes.Buffer{}, err
+			errChan <- err
+		} else {
+			for _, tableName := range tableNames {
+				tableNameChan <- tableName
+			}
 		}
+		// ¡Muy importante! Cerrar el canal de trabajos para que los workers terminen.
+		close(tableNameChan)
+	}()
 
-		tableGeneral = append(tableGeneral, dto.TableDetailed{TableName: tableName.TableName, SchemaName: tableName.SchemaName, Columns: tableDetail})
+	// 3. Goroutine para cerrar los canales de resultados cuando los workers terminen
+	go func() {
+		wg.Wait()
+		close(tableDetailedChan)
+		close(errChan)
+	}()
 
+	// 4. Recolectar resultados en la goroutine principal
+	var resultBuilder strings.Builder
+	var firstErr error
+
+	// Usamos un bucle for/range doble para leer los canales hasta que se cierren.
+	// Esto es más limpio que el bucle infinito con select y checks de `nil`.
+	for tableDetailedChan != nil || errChan != nil {
+		select {
+		case errVal, ok := <-errChan:
+			if !ok {
+				errChan = nil // El canal se cerró
+			} else if firstErr == nil {
+				firstErr = errVal // Capturamos solo el primer error
+			}
+		case tableDetailed, ok := <-tableDetailedChan:
+			if !ok {
+				tableDetailedChan = nil // El canal se cerró
+			} else {
+				resultBuilder.WriteString(filecreator.FormatTables(tableDetailed))
+			}
+		}
 	}
 
-	var result string
-
-	for _, table := range tableGeneral {
-		result += filecreator.FormatTables(table)
+	if firstErr != nil {
+		return bytes.Buffer{}, firstErr // Devolvemos el primer error que encontramos
 	}
 
-	filecreator.GenerateSQLFile(&file, result)
+	filecreator.GenerateSQLFile(&file, resultBuilder.String())
 
-	return
+	return file, nil // El 'named return' `err` será nil aquí.
 
 }
 
